@@ -1,9 +1,18 @@
 // Jenkins Scripted Pipeline for lern-service (AWS)
-// Parameter BRANCH is defined in the job configuration.
-// Image tag = <branch>-<short commit>, e.g. main-a1b2c3d
+// Image tag = <branch>_<short commit>_<build number>
+//   e.g. spark-v1.0.2.1-work_0477f61_42
 //
 // Prerequisite: the Jenkins agent must already be logged in to Docker Hub
 // as the jenkins user (run once on the agent: sudo -u jenkins docker login -u aastardev1)
+
+properties([
+    parameters([
+        string(name: 'BRANCH', defaultValue: 'spark-v1.0.2.1-work',
+               description: 'Branch of Sphere/lern-service to build'),
+        string(name: 'COMMIT', defaultValue: '0477f61',
+               description: 'Commit to build. Leave empty to build the branch tip (adds 8288d34, SMS OTP fix)')
+    ])
+])
 
 // Runs Maven inside a container instead of needing it on the agent
 def mvn(String args) {
@@ -21,22 +30,30 @@ def mvn(String args) {
 }
 
 node {
-    def imageRepo   = 'aastardev1/lern-service'
-    def imageTag    = ''
+    def repoUrl   = 'https://github.com/Sphere/lern-service.git'
+    def imageRepo = 'aastardev1/lern-service'
+    def imageTag  = ''
 
     try {
         stage('Checkout') {
-            // Clean everything except the Maven cache
-            cleanWs(patterns: [[pattern: '.m2/**', type: 'EXCLUDE']])
-            checkout scm
-            // Or, for a fixed repo instead of the job's SCM:
-            // git branch: params.BRANCH, url: 'https://github.com/your-org/your-repo.git', credentialsId: 'github-creds'
+        
 
-            def shortCommit = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-            def branch      = (params.BRANCH ?: env.BRANCH_NAME ?: 'unknown').trim()
+            def branch = (params.BRANCH ?: 'spark-v1.0.2.1-work').trim()
+            def commit = (params.COMMIT ?: '').trim()
+
+            git branch: branch, url: repoUrl
+
+            if (commit) {
+                echo "Pinning build to commit ${commit}"
+                sh "git checkout ${commit}"
+            } else {
+                echo "Building tip of ${branch}"
+            }
+
+            def shortCommit = sh(script: 'git rev-parse --short=7 HEAD', returnStdout: true).trim()
             // Docker tags can't contain '/', so feature/foo -> feature-foo
             def safeBranch  = branch.replaceAll('[^A-Za-z0-9_.-]', '-')
-            imageTag = "${safeBranch}-${shortCommit}"
+            imageTag = "${safeBranch}_${shortCommit}_${env.BUILD_NUMBER}"
             echo "Image tag: ${imageTag}"
         }
 

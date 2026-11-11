@@ -45,10 +45,12 @@ node {
         }
 
         stage('Docker Build') {
-            sh "docker build -f build/lern/Dockerfile --build-arg CSP=aws -t ${imageRepo}:${env.IMAGE_TAG} ."
+            sh "docker build -f build/lern/Dockerfile --build-arg CSP=aws -t ${imageRepo}/${imageName}:${env.IMAGE_TAG} ."
+            echo {\"image_name\" : \"${imageName}\", \"image_tag\" : \"${env.IMAGE_TAG}\"} > metadata.json
         }
 
          stage('ArchiveArtifacts') {
+                    
                     archiveArtifacts "metadata.json"
                     currentBuild.description = "${imageRepo}:${env.IMAGE_TAG}"
 

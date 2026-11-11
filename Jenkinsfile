@@ -50,9 +50,10 @@ node {
 
          stage('ArchiveArtifacts') {
                     archiveArtifacts "metadata.json"
+                    currentBuild.description = "${imageRepo}:${env.IMAGE_TAG}"
+
                 }
         currentBuild.result = 'SUCCESS'
-        currentBuild.description = "${imageRepo}:${env.IMAGE_TAG}"
 
     } catch (err) {
         currentBuild.result = 'FAILURE'

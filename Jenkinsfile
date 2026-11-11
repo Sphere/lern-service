@@ -3,12 +3,8 @@
 // Image tag = <branch>-<short commit>, e.g. main-a1b2c3d
 
 node {
-    // Names must match what is configured in Jenkins
-    def mvnHome     = tool 'maven3'             // Manage Jenkins > Tools > Maven
     def imageRepo   = 'aastardev1/lern-service'
     def imageTag    = ''
-
-    env.PATH = "${mvnHome}/bin:${env.PATH}"
 
     try {
         stage('Checkout') {

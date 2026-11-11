@@ -8,11 +8,11 @@
 // Runs Maven inside a container instead of needing it on the agent
 def mvn(String args) {
     sh """
-        mkdir -p "\$HOME/.m2"
+        mkdir -p "\$WORKSPACE/.m2"
         docker run --rm \\
             -u "\$(id -u):\$(id -g)" \\
             -v "\$PWD":/src \\
-            -v "\$HOME/.m2":/var/maven/.m2 \\
+            -v "\$WORKSPACE/.m2":/var/maven/.m2 \\
             -e MAVEN_CONFIG=/var/maven/.m2 \\
             -w /src \\
             maven:3.9-eclipse-temurin-11 \\
@@ -26,7 +26,8 @@ node {
 
     try {
         stage('Checkout') {
-            cleanWs()
+            // Clean everything except the Maven cache
+            cleanWs(patterns: [[pattern: '.m2/**', type: 'EXCLUDE']])
             checkout scm
             // Or, for a fixed repo instead of the job's SCM:
             // git branch: params.BRANCH, url: 'https://github.com/your-org/your-repo.git', credentialsId: 'github-creds'

@@ -1,5 +1,6 @@
 // Jenkins Scripted Pipeline for lern-service (AWS)
-// Parameters (BRANCH, TAG) are defined in the job configuration.
+// Parameter BRANCH is defined in the job configuration.
+// Image tag = <branch>-<short commit>, e.g. main-a1b2c3d
 
 node {
     // Names must match what is configured in Jenkins
@@ -17,7 +18,10 @@ node {
             // git branch: params.BRANCH, url: 'https://github.com/your-org/your-repo.git', credentialsId: 'github-creds'
 
             def shortCommit = sh(script: 'git rev-parse --short HEAD', returnStdout: true).trim()
-            imageTag = params.TAG?.trim() ? params.TAG.trim() : "${env.BUILD_NUMBER}-${shortCommit}"
+            def branch      = (params.BRANCH ?: env.BRANCH_NAME ?: 'unknown').trim()
+            // Docker tags can't contain '/', so feature/foo -> feature-foo
+            def safeBranch  = branch.replaceAll('[^A-Za-z0-9_.-]', '-')
+            imageTag = "${safeBranch}-${shortCommit}"
             echo "Image tag: ${imageTag}"
         }
 

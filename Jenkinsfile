@@ -16,15 +16,16 @@ def mvn(String args) {
 }
 
 node {
-    // Docker Hub repository, from the job's IMAGE_REPO parameter
-    def imageRepo = (params.IMAGE_REPO ?: 'aastardev1/lern-service').trim()
+    // Required job parameters - no defaults, so each job must set its own
+    def branch    = (params.BRANCH ?: '').trim()
+    def imageRepo = (params.IMAGE_REPO ?: '').trim()
+
+    if (!branch)    { error 'BRANCH parameter is required' }
+    if (!imageRepo) { error 'IMAGE_REPO parameter is required' }
 
     try {
         stage('Checkout') {
-            // Clean everything except the build cache (Maven .m2 + Scala .sbt)
-            
-            def branch = (params.BRANCH ?: 'spark-v1.0.2.1-work').trim()
-
+           
             // Uses the repo + branch from the job's SCM config (Branch Specifier: */${BRANCH})
             checkout scm
 
@@ -47,10 +48,9 @@ node {
             sh "docker build -f build/lern/Dockerfile --build-arg CSP=aws -t ${imageRepo}:${env.IMAGE_TAG} ."
         }
 
-        stage('Docker Push') {
-            sh "docker push ${imageRepo}:${env.IMAGE_TAG}"
-        }
-
+         stage('ArchiveArtifacts') {
+                    archiveArtifacts "metadata.json"
+                }
         currentBuild.result = 'SUCCESS'
         currentBuild.description = "${imageRepo}:${env.IMAGE_TAG}"
 
@@ -58,10 +58,6 @@ node {
         currentBuild.result = 'FAILURE'
         echo "Build failed: ${err}"
         throw err
-    } finally {
-        stage('Cleanup') {
-            // Remove the local image to save disk space; keep the agent's Docker Hub login
-            sh "docker rmi ${imageRepo}:${env.IMAGE_TAG} || true"
-        }
+    } 
     }
 }

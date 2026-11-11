@@ -17,11 +17,12 @@ properties([
 // Runs Maven inside a container instead of needing it on the agent
 def mvn(String args) {
     sh """
-        mkdir -p "\$WORKSPACE/.m2"
+        mkdir -p "\$WORKSPACE/.build-home/.m2"
         docker run --rm \\
             -u "\$(id -u):\$(id -g)" \\
             -v "\$PWD":/src \\
-            -v "\$WORKSPACE/.m2":/var/maven/.m2 \\
+            -v "\$WORKSPACE/.build-home":/var/maven \\
+            -e HOME=/var/maven \\
             -e MAVEN_CONFIG=/var/maven/.m2 \\
             -w /src \\
             maven:3.9-eclipse-temurin-11 \\
@@ -36,7 +37,10 @@ node {
 
     try {
         stage('Checkout') {
-        
+            // Clean everything except the build cache (Maven .m2 + Scala .sbt)
+            cleanWs(deleteDirs: true,
+                    patterns: [[pattern: '.build-home', type: 'EXCLUDE'],
+                               [pattern: '.build-home/**', type: 'EXCLUDE']])
 
             def branch = (params.BRANCH ?: 'spark-v1.0.2.1-work').trim()
             def commit = (params.COMMIT ?: '').trim()
